@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Support Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --ios-blue: #007AFF;
+      --ios-green: #34C759;
+      --ios-gray: #E9E9EB;
+      --ios-dark-gray: #8E8E93;
+      --ios-bg: #F2F2F7;
+      --ios-text: #1C1C1E;
+      --ios-subtext: #8E8E93;
+      --ios-separator: #C6C6C8;
+      --safe-top: env(safe-area-inset-top, 20px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --ios-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      --ios-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: var(--ios-bg);
+      color: var(--ios-text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* iOS Navigation Bar */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding-top: var(--safe-top);
+      background: rgba(249, 249, 249, 0.94);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--ios-separator);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 44px;
+      padding: 0 16px;
+      position: relative;
+    }
+
+    .nav-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .logout-btn {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 15px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--ios-red);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+
+    .logout-btn:active {
+      background: rgba(255, 59, 48, 0.1);
+    }
+
+    /* Connection Status */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      font-size: 11px;
+      color: var(--ios-subtext);
+      background: rgba(249, 249, 249, 0.94);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-dot.online {
+      background: #34C759;
+    }
+
+    .status-dot.offline {
+      background: var(--ios-dark-gray);
+    }
+
+    /* Chat Messages */
+    .chat-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding-top: calc(var(--safe-top) + 68px);
+      padding-bottom: calc(var(--safe-bottom) + 72px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      gap: 6px;
+    }
+
+    .message {
+      max-width: 78%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 16px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      animation: messageIn 0.4s var(--ios-spring);
+      position: relative;
+      will-change: transform, opacity;
+    }
+
+    @keyframes messageIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.85) translateY(14px);
+      }
+      55% {
+        opacity: 1;
+        transform: scale(1.025) translateY(-2px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--ios-blue);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.admin {
+      align-self: flex-start;
+      background: var(--ios-green);
+      color: white;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message img {
+      max-width: 100%;
+      border-radius: 12px;
+      display: block;
+      margin: -2px 0;
+    }
+
+    .message .time {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 4px;
+      display: block;
+      text-align: right;
+    }
+
+    .message.admin .time,
+    .message.user .time {
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    /* System message (date separator) */
+    .system-msg {
+      text-align: center;
+      font-size: 12px;
+      color: var(--ios-subtext);
+      margin: 16px 0 8px;
+    }
+
+    .system-msg span {
+      background: var(--ios-bg);
+      padding: 4px 12px;
+      border-radius: 10px;
+    }
+
+    /* Typing indicator */
+    .typing {
+      align-self: flex-start;
+      background: #E8E8EC;
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      padding: 12px 18px;
+      display: none;
+      gap: 4px;
+    }
+
+    .typing.active {
+      display: flex;
+    }
+
+    .typing span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ios-dark-gray);
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-4px); }
+    }
+
+    /* Input Bar */
+    .input-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding-bottom: var(--safe-bottom);
+      background: rgba(249, 249, 249, 0.94);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-top: 0.5px solid var(--ios-separator);
+    }
+
+    .input-inner {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 8px 12px;
+      min-height: 52px;
+    }
+
+    .attach-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      color: var(--ios-blue);
+      font-size: 20px;
+      transition: background 0.2s;
+    }
+
+    .attach-btn:active {
+      background: rgba(0, 122, 255, 0.1);
+    }
+
+    .text-input {
+      flex: 1;
+      border: none;
+      border-radius: 20px;
+      background: var(--ios-bg);
+      padding: 10px 16px;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--ios-text);
+      outline: none;
+      max-height: 100px;
+      resize: none;
+      line-height: 1.4;
+    }
+
+    .text-input::placeholder {
+      color: var(--ios-subtext);
+    }
+
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: var(--ios-blue);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      color: white;
+      font-size: 16px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .send-btn:active {
+      opacity: 0.7;
+      transform: scale(0.92);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* Image preview in input */
+    .image-preview {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px 0;
+    }
+
+    .image-preview.active {
+      display: flex;
+    }
+
+    .image-preview img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .image-preview .remove-img {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--ios-dark-gray);
+      color: white;
+      border: none;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Welcome message */
+    .welcome {
+      text-align: center;
+      padding: 40px 20px 20px;
+      color: var(--ios-subtext);
+    }
+
+    .welcome h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--ios-text);
+      margin-bottom: 6px;
+    }
+
+    .welcome p {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Scrollbar */
+    .chat-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    .chat-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-container::-webkit-scrollbar-thumb {
+      background: var(--ios-separator);
+      border-radius: 4px;
+    }
+
+    /* ==================== REGISTRATION SCREEN ==================== */
+    .register-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .register-card {
+      background: rgba(249, 249, 249, 0.95);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-radius: 20px;
+      padding: 32px 24px 24px;
+      width: 100%;
+      max-width: 340px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .register-icon {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .register-title {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 6px;
+      color: var(--ios-text);
+    }
+
+    .register-subtitle {
+      font-size: 14px;
+      color: var(--ios-subtext);
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+
+    .register-field {
+      margin-bottom: 12px;
+    }
+
+    .register-input {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      background: #E4E4E8;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--ios-text);
+      outline: none;
+    }
+
+    .register-input::placeholder {
+      color: var(--ios-subtext);
+    }
+
+    .register-input:focus {
+      background: #DCDCE0;
+    }
+
+    .register-btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      background: var(--ios-blue);
+      color: white;
+      font-size: 17px;
+      font-weight: 600;
+      font-family: inherit;
+      padding: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .register-btn:active {
+      opacity: 0.7;
+    }
+
+    .register-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* ==================== CALL UI ==================== */
+    .call-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 300;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .call-overlay.active {
+      display: flex;
+    }
+
+    .call-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 16px;
+    }
+
+    .call-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 4px;
+    }
+
+    .call-status-text {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 40px;
+    }
+
+    .call-timer {
+      font-size: 48px;
+      font-weight: 300;
+      color: white;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 40px;
+      letter-spacing: 2px;
+    }
+
+    .call-actions {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .call-action-btn {
+      width: 64px;
+      height: 64px;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.2s;
+    }
+
+    .call-action-btn:active {
+      transform: scale(0.92);
+    }
+
+    .call-action-btn.accept {
+      background: var(--ios-green);
+      color: white;
+    }
+
+    .call-action-btn.reject {
+      background: var(--ios-red);
+      color: white;
+    }
+
+    .call-action-btn.end {
+      background: var(--ios-red);
+      color: white;
+    }
+
+    .call-action-btn.cancel {
+      background: #555;
+      color: white;
+    }
+
+    /* Call button in input bar */
+    .call-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .call-btn:active {
+      opacity: 0.6;
+    }
+
+    .call-btn.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      color: var(--ios-subtext);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <div class="nav">
+    <div class="status-bar">
+      <span class="status-dot offline" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+    <div class="nav-inner">
+      <span class="nav-title">Support Chat</span>
+      <button class="logout-btn" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-container" id="chatContainer">
+    <div class="messages" id="messagesContainer">
+      <div class="empty-state">
+        <div class="icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ios-dark-gray)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="12" y1="13" x2="15" y2="13"/>
+          </svg>
+        </div>
+        <h3>Welcome to Support</h3>
+        <p>Hi there! How can we help you today?<br>Send a message and our team will assist you.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Bar -->
+  <div class="input-bar">
+    <div class="image-preview" id="imagePreview">
+      <img id="previewImg" src="" alt="preview">
+      <button class="remove-img" id="removeImg">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-inner">
+      <button class="attach-btn" id="attachBtn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ios-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <button class="call-btn" id="callBtn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ios-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+      </button>
+      <textarea class="text-input" id="textInput" placeholder="Message..." rows="1"></textarea>
+      <button class="send-btn" id="sendBtn" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"/>
+          <polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Registration Screen -->
+  <div class="register-screen" id="registerScreen" style="display:none">
+    <div class="register-card">
+      <div class="register-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ios-blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="register-title">Welcome to Support</div>
+      <div class="register-subtitle">Enter your details to start chatting</div>
+      <div class="register-field">
+        <input class="register-input" id="nameInput" type="text" placeholder="Your Name" autocomplete="name">
+      </div>
+      <div class="register-field">
+        <input class="register-input" id="gameUidInput" type="text" placeholder="Game UID">
+      </div>
+      <button class="register-btn" id="registerBtn" disabled>Continue</button>
+    </div>
+  </div>
+
+  <!-- Call Overlay -->
+  <div class="call-overlay" id="callOverlay">
+    <div class="call-avatar" id="callAvatar">S</div>
+    <div class="call-name" id="callName">Support</div>
+    <div class="call-status-text" id="callStatusText">Calling...</div>
+    <div class="call-timer" id="callTimer" style="display:none">00:00</div>
+    <div class="call-actions" id="callActions"></div>
+  </div>
+
+  <audio id="remoteAudio" autoplay></audio>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
